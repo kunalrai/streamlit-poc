@@ -3,8 +3,7 @@ from datetime import datetime
 import pandas as pd
 import os,requests
 
-import plotly.express as px
-import plotly.subplots as sp
+
 from dotenv import load_dotenv
 load_dotenv()
 

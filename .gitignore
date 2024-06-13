@@ -1,6 +1,6 @@
 .env
 venv
-.csv
+*.csv
 __pycache__
 data.json
 *.db

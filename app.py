@@ -1,7 +1,7 @@
 import streamlit as st
 from data_loader import DataLoader
 from data_processor import DataProcessor
-from ui import display_api_data, display_data, display_filters,display_api_filters
+from ui import   display_filters,download_data,load_cached_data
 import plotly.express as px
 import pandas as pd
 import os
@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 def main():
     st.set_page_config(page_title="Data Viewer Application",page_icon = ":bar_chart:",layout="wide")
     st.title(":bar_chart: Data Viewer Application")
-    tab1, tab2 = st.tabs(['Local Data', 'Phishing Data'])
+    
     st.markdown("""
     <style>
     .block-container {
@@ -26,24 +26,42 @@ def main():
     """,
     unsafe_allow_html=True
     )
-    with tab1:
-        # Load data
-        data_loader = DataLoader('data.json')
-        data = data_loader.load_data()
+    data = pd.DataFrame()
+    download_data()
+    
+    data = load_cached_data('data\output.csv')
+    # Calculate total count
+    total_count = data['campaignname'].count()
 
-        # Display filters
-        filters = display_filters(data)
-        
-        # Process data
-        data_processor = DataProcessor(data)
-        filtered_data = data_processor.apply_filters(filters)
+    st.markdown(f"""
+    <div style="display: flex; width: 100%; margin-bottom: 20px;">
+    <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%; margin-right: 10px;">
+        <h3>Total Campaigns</h3>
+        <p style="font-size: 24px; font-weight: bold;">{total_count}</p>
+    </div>
+    <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%;">
+        <h3></h3>
+        <p style="font-size: 24px; font-weight: bold;"></p>
+    </div>
+</div>
 
-        # Display data
-        display_data(data)
+    """, unsafe_allow_html=True)
+    
+    
+    filters = display_filters(data)
+    data_processor = DataProcessor(data)
+    filtered_data = data_processor.apply_filters(filters)
+    if not filtered_data.empty:
+        st.dataframe(filtered_data)
+    else:
+        st.dataframe(data)
+    
+    grouped_data = data.groupby('campaignname').size().reset_index(name='count')
 
-    with tab2:
-        #filters = display_api_filters()
-        display_api_data()
+# Display the grouped and counted data
+    st.subheader("Group By Campaign Name")
+
+    st.dataframe(grouped_data)
 
 if __name__ == '__main__':
     main()

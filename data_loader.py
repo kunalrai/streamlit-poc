@@ -3,7 +3,10 @@ import json
 import requests
 import os
 import csv
-from io import StringIO
+import streamlit as st
+import time
+import math
+
 
 class DataLoader:
     def __init__(self, file_path):
@@ -53,21 +56,26 @@ class ApiDataLoader:
             for row in data:
                 writer.writerow(row)
 
-    def stream_data(self):
+    def stream_data(self)->str:
         # Initial fetch to determine the number of pages
         initial_data = self.fetch_data()
         total_pages = (initial_data['meta']['count'] - 1) // initial_data['meta']['page_size'] + 1
         
         # Fetch and stream data for each page
         all_data = []
+        progress_text = "Operation in progress. Please wait."
+        my_bar = st.progress(0, text=progress_text)
+
         for page_number in range(1, total_pages + 1):
             response_data = self.fetch_data(page_number)
             page_data = [self.flatten_dict(item) for item in response_data['data']]
             all_data.extend(page_data)
-            progress = (page_number / total_pages) * 100
-            print(f"Page {page_number}/{total_pages}, Progress: {progress:.2f}%")
+            progress:int = (page_number / total_pages) * 100
+            progress_text = f"Page {page_number}/{total_pages}, Progress: {progress:.2f}%"
+            my_bar.progress(math.floor(progress), text=progress_text)
             if page_number == total_pages:
-                print("Data streaming complete.")
+                st.write( "Data streaming complete.")
+            
         
         self.save_to_csv(all_data, 'data/output.csv')
 

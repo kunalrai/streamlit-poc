@@ -29,7 +29,7 @@ class ApiDataLoader:
         self.end_date = end_date
 
     def fetch_data(self, page_number=1):
-        paginated_url = (f"{self.url_base}?filter[_eventtimestamp_start]={self.start_date}&"
+        paginated_url = (f"{self.url_base}?filter[_campaignstartdate_start]={self.start_date}&"
                          f"filter[_campaignstartdate_end]={self.end_date}&page[number]={page_number}")
         response = requests.get(paginated_url, headers=self.headers)
         return response.json()
@@ -79,6 +79,4 @@ class ApiDataLoader:
         
         self.save_to_csv(all_data, 'data/output.csv')
 
-# Usage example
-#api_loader = ApiDataLoader("2023-12-01", "2023-12-31")
-#api_loader.stream_data()
+

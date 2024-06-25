@@ -65,92 +65,82 @@ def download_data():
     if not campaignname == '':
         df = load_cached_data('data\output.csv')
         df = df[df['campaignname'].str.contains(campaignname)]
-        total_count = df['campaignname'].count()
-        st.markdown(f"""
-                <div style="display: flex; width: 100%; margin-bottom: 20px;">
-                <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%; margin-right: 10px;">
-                    <h3>Total Campaigns</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{total_count}</p>
-                </div>
-                <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%;">
-                    <h3></h3>
-                    <p style="font-size: 24px; font-weight: bold;"></p>
-                </div>
-            </div>
-
-                """, unsafe_allow_html=True)
+        
         st.dataframe(df)
         groupdatadf(df)
 
     else:
         df = load_cached_data('data\output.csv')
-        total_count = df['campaignname'].count()
-        st.markdown(f"""
-        <div style="display: flex; width: 100%; margin-bottom: 20px;">
-        <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%; margin-right: 10px;">
-            <h3>Total Campaigns</h3>
-            <p style="font-size: 24px; font-weight: bold;">{total_count}</p>
-        </div>
-        <div style="padding: 10px; border-radius: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-align: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 50%;">
-            <h3></h3>
-            <p style="font-size: 24px; font-weight: bold;"></p>
-        </div>
-    </div>
-
-        """, unsafe_allow_html=True)
+        st.metric("Total",df.shape[0])
         st.dataframe(df)
         groupdatadf(df)
 
 def groupdatadf(df):
-    #col1,col2,col3 = st.columns((3))
-    # with col1:
-    #     st.subheader("Group By Campaign Name")
-    #     grouped_data = df.groupby('campaignname').size().reset_index(name='count')
-    #     st.dataframe(grouped_data)
-    # with col2:
-    #     st.subheader("Group By User")
-    #     grouped_data = df.groupby(['useremailaddress']).size().reset_index(name='count')
-    #     st.dataframe(grouped_data)
-    #with col3:
-    #st.subheader("Group By EventType")
+    
     grouped_data = df.groupby(['eventtype','campaignname','useremailaddress']).agg({'eventtimestamp':['max']}).reset_index()
     pivoted_df = grouped_data.pivot(index=['campaignname', 'useremailaddress'], columns='eventtype', values=('eventtimestamp', 'max')).reset_index()
-    st.write("### Pivoted Data")
-    st.dataframe(pivoted_df)
+    
 
     # Filter the DataFrame for non-None values in 'Email Click'
     df_filtered = pivoted_df[pivoted_df['Email Click'].notna()]
     
     # Group by campaignname and count the occurrences of 'Email Click'
-    email_click_counts = df_filtered.groupby('campaignname')['Email Click'].count().reset_index()
-    email_click_counts.columns = ['campaignname', 'click_count']
+    columns_to_count = ['Email Click', 'Email View', 'No Action','Reported','TM Complete','TM Sent']
+    email_click_counts = df_filtered.groupby('campaignname')[columns_to_count].count().reset_index()
     
-    # Plot the bar chart
-    plt.figure(figsize=(10, 6))
-    plt.bar(email_click_counts['campaignname'], email_click_counts['click_count'], color='skyblue')
-    plt.xlabel('Campaign Name')
-    plt.ylabel('Count of Email Clicks')
-    plt.title('Count of User Email Clicks by Campaign')
-    plt.xticks(rotation=90)
-    bars = plt.bar(email_click_counts['campaignname'], email_click_counts['click_count'], color='skyblue')
+   
         
+    total_counts = pivoted_df[columns_to_count].count()
+    campaign_name = pivoted_df['campaignname'].iloc[0].split("_")[1]
+    
+    email_view =  total_counts['Email View']
 
-    for bar in bars:
-            yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom')
-        
+    phis_sent =  pivoted_df.shape[0]
+    phis_open_rate = ( email_view/phis_sent) * 100
+
+    email_click = total_counts['Email Click']
+    email_open_click_rate = (email_click/phis_sent)*100
+
+    for col, count in total_counts.items():
+        print(f"{col}: {count}")
     
-    # Display the plot in Streamlit
-    col1,col2 = st.columns((2))
-    with col1:
-        st.pyplot(plt)
+    def format_number(number):
+        return '{:,.0f}'.format(number)
+    
+    st.markdown(
+    f"""
+    <div style=" justify-content: center; align-items: center; height: 200px;width:100%">
+        <div style="background-color: #0074D9; padding: 20px; text-align: center;">
+            <h2 style="color: white;">{campaign_name}</h1>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+    col1.metric("Phishes Sent",format_number( phis_sent))
+    col2.metric("Email Open", format_number(email_view))
+    col3.metric("Phish Open Rate",f"{phis_open_rate:.2f}%")
+    col4.metric("Email Open Clicked Rate", f"{email_open_click_rate:.2f}%")
+    col5.metric("Overall Clicked Rate", "3%")
+    col6.metric("Reported [ProofPoint]", "15,270")
+    col7.metric("Overall Reported Rate [ProofPoint]", "32%")
+    col8.metric("Reported [Other Sources]", "10")
+
+    st.write("### Pivoted Data")
+    st.dataframe(pivoted_df)
+
+    st.write("### Group By Count")
+    st.dataframe(email_click_counts)
 
 #@st.cache_data
 def load_cached_data(file_path):
     try:
         print(file_path)
         df= pd.read_csv(file_path)
-        selected_columns = ['useremailaddress', 'eventtype', 'campaignname', 'userfirstname','userlastname','eventtimestamp']
+        selected_columns = ['useremailaddress', 'eventtype', 'campaignname', 'userfirstname','userlastname','eventtimestamp','campaignstartdate','campaignenddate']
+        df = df[selected_columns]
         return df
         
     except FileNotFoundError:
